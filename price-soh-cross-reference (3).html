@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Price List & SOH Cross-Reference Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .upload-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .upload-box {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s;
+            background: #f8f9ff;
+        }
+
+        .upload-box:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-box.active {
+            border-color: #4CAF50;
+            background: #e8f5e9;
+        }
+
+        .upload-box h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .upload-box p {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .file-input-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .file-name {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #4CAF50;
+            font-weight: 600;
+        }
+
+        .config-section {
+            background: #f9f9f9;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .config-section h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .config-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .config-item label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .config-item select,
+        .config-item input {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .config-item select:focus,
+        .config-item input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-width: 200px;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-process {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-process:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-process:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-download {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-download:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+
+        .btn-reset {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #d32f2f;
+            transform: translateY(-2px);
+        }
+
+        .stats {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            display: none;
+            color: white;
+        }
+
+        .stats.show {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .preview-section {
+            display: none;
+            margin-bottom: 30px;
+        }
+
+        .preview-section.show {
+            display: block;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .preview-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tr:hover {
+            background: #f8f9ff;
+        }
+
+        .matched {
+            background: #e8f5e9;
+        }
+
+        .unmatched {
+            background: #fff3cd;
+        }
+
+        .new-price {
+            color: #4CAF50;
+            font-weight: 600;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-left: 4px solid #1976d2;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 4px solid #ffc107;
+        }
+
+        .alert-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 768px) {
+            .upload-section {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Price List & SOH Cross-Reference Tool</h1>
+        <p class="subtitle">Automatically match and merge pricing data from your Price List into your SOH Report</p>
+
+        <div class="upload-section">
+            <div class="upload-box" id="priceListBox">
+                <h3>📝 Price List File</h3>
+                <p>Upload your Excel price list containing item codes and prices</p>
+                <div class="file-input-wrapper">
+                    <input type="file" id="priceListFile" accept=".xlsx,.xls,.csv" onchange="handlePriceListUpload(event)">
+                    <label for="priceListFile" class="file-input-label">Choose Price List File</label>
+                </div>
+                <div class="file-name" id="priceListName"></div>
+            </div>
+
+            <div class="upload-box" id="sohBox">
+                <h3>📦 SOH Report File</h3>
+                <p>Upload your Stock on Hand (SOH) report Excel file</p>
+                <div class="file-input-wrapper">
+                    <input type="file" id="sohFile" accept=".xlsx,.xls,.csv" onchange="handleSOHUpload(event)">
+                    <label for="sohFile" class="file-input-label">Choose SOH Report File</label>
+                </div>
+                <div class="file-name" id="sohName"></div>
+            </div>
+        </div>
+
+        <div class="config-section" id="sheetSelection" style="display: none;">
+            <h3>📑 Sheet Selection</h3>
+            <p style="color: #666; margin-bottom: 20px;">If your files have multiple sheets, select which sheet to use:</p>
+            
+            <div class="config-grid">
+                <div class="config-item">
+                    <label for="priceListSheet">Price List - Select Sheet:</label>
+                    <select id="priceListSheet" onchange="loadPriceListSheet(parseInt(this.value))"></select>
+                </div>
+                
+                <div class="config-item">
+                    <label for="sohSheet">SOH Report - Select Sheet:</label>
+                    <select id="sohSheet" onchange="loadSOHSheet(parseInt(this.value))"></select>
+                </div>
+            </div>
+        </div>
+
+        <div class="config-section" id="configSection" style="display: none;">
+            <h3>⚙️ Configuration Settings</h3>
+            <p style="color: #666; margin-bottom: 20px;">Select the columns to match and the price column to copy:</p>
+            
+            <div class="config-grid">
+                <div class="config-item">
+                    <label for="priceListItemColumn">Price List - Item Code Column:</label>
+                    <select id="priceListItemColumn"></select>
+                </div>
+                
+                <div class="config-item">
+                    <label for="priceListPriceColumn">Price List - Price Column:</label>
+                    <select id="priceListPriceColumn"></select>
+                </div>
+                
+                <div class="config-item">
+                    <label for="sohItemColumn">SOH Report - Item Code Column:</label>
+                    <select id="sohItemColumn"></select>
+                </div>
+                
+                <div class="config-item">
+                    <label for="newPriceColumnName">New Price Column Name:</label>
+                    <input type="text" id="newPriceColumnName" value="Unit Price" placeholder="e.g., Unit Price, RSP, Cost">
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px; padding: 15px; background: white; border-radius: 10px; border: 2px solid #667eea;">
+                <label style="display: flex; align-items: center; cursor: pointer; font-size: 1.05em;">
+                    <input type="checkbox" id="removeUnpriced" style="width: 20px; height: 20px; margin-right: 10px; cursor: pointer;">
+                    <span style="color: #333; font-weight: 600;">
+                        🗑️ Remove items without pricing from the final report
+                    </span>
+                </label>
+                <p style="margin-top: 8px; margin-left: 30px; color: #666; font-size: 0.9em;">
+                    When enabled, only items that have a matching price will be included in the downloaded report
+                </p>
+            </div>
+        </div>
+
+        <div class="alert alert-info" id="alertBox"></div>
+
+        <div class="button-group">
+            <button class="btn-process" id="processBtn" onclick="processFiles()" disabled>🔄 Process & Match Data</button>
+            <button class="btn-download" id="downloadBtn" onclick="downloadResult()" style="display: none;">💾 Download Excel File</button>
+            <button class="btn-download" id="downloadCsvBtn" onclick="downloadCSV()" style="display: none; background: #FF9800;">📄 Download CSV File</button>
+            <button class="btn-reset" onclick="resetAll()">🔄 Reset All</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing files and matching data...</p>
+        </div>
+
+        <div class="stats" id="stats">
+            <h3 style="margin-bottom: 20px;">📈 Processing Results</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">Total SOH Items</div>
+                    <div class="stat-value" id="totalItems">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Successfully Matched</div>
+                    <div class="stat-value" id="matchedItems">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Not Matched</div>
+                    <div class="stat-value" id="unmatchedItems">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Match Rate</div>
+                    <div class="stat-value" id="matchRate">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="preview-section" id="previewSection">
+            <h3>👀 Preview (First 20 rows with matched prices highlighted)</h3>
+            <div class="table-wrapper">
+                <table id="previewTable"></table>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Created for Deli Stationery Sales Team | Price & SOH Cross-Reference Tool v1.0</p>
+        </div>
+    </div>
+
+    <script>
+        let priceListData = null;
+        let sohData = null;
+        let processedData = null;
+        let priceListHeaders = [];
+        let sohHeaders = [];
+        let priceListWorkbook = null;
+        let sohWorkbook = null;
+
+        function handlePriceListUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('priceListName').textContent = `✓ ${file.name}`;
+            document.getElementById('priceListBox').classList.add('active');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                priceListWorkbook = XLSX.read(data, { type: 'array' });
+                
+                console.log('Price List Sheets:', priceListWorkbook.SheetNames);
+                
+                // Populate sheet selector
+                const sheetSelect = document.getElementById('priceListSheet');
+                sheetSelect.innerHTML = '';
+                priceListWorkbook.SheetNames.forEach((sheetName, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = sheetName;
+                    sheetSelect.appendChild(option);
+                });
+                
+                // Load the first sheet by default
+                loadPriceListSheet(0);
+                
+                document.getElementById('sheetSelection').style.display = 'block';
+                checkFilesReady();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function loadPriceListSheet(sheetIndex) {
+            if (!priceListWorkbook) return;
+            
+            const sheetName = priceListWorkbook.SheetNames[sheetIndex];
+            const sheet = priceListWorkbook.Sheets[sheetName];
+            const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            
+            console.log('Price List Raw Data (first 3 rows):', rawData.slice(0, 3));
+            
+            // Find the first non-empty row to use as headers
+            let headerRowIndex = 0;
+            for (let i = 0; i < Math.min(5, rawData.length); i++) {
+                const row = rawData[i];
+                const hasContent = row && row.some(cell => cell !== null && cell !== undefined && cell !== '');
+                if (hasContent) {
+                    headerRowIndex = i;
+                    break;
+                }
+            }
+            
+            // Extract data starting from header row
+            priceListData = rawData.slice(headerRowIndex);
+            
+            if (priceListData.length > 0) {
+                priceListHeaders = priceListData[0];
+                console.log('Price List Headers:', priceListHeaders);
+                populateColumnSelectors();
+            }
+        }
+
+        function handleSOHUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('sohName').textContent = `✓ ${file.name}`;
+            document.getElementById('sohBox').classList.add('active');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                sohWorkbook = XLSX.read(data, { type: 'array' });
+                
+                console.log('SOH Sheets:', sohWorkbook.SheetNames);
+                
+                // Populate sheet selector
+                const sheetSelect = document.getElementById('sohSheet');
+                sheetSelect.innerHTML = '';
+                sohWorkbook.SheetNames.forEach((sheetName, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = sheetName;
+                    sheetSelect.appendChild(option);
+                });
+                
+                // Load the first sheet by default
+                loadSOHSheet(0);
+                
+                document.getElementById('sheetSelection').style.display = 'block';
+                checkFilesReady();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function loadSOHSheet(sheetIndex) {
+            if (!sohWorkbook) return;
+            
+            const sheetName = sohWorkbook.SheetNames[sheetIndex];
+            const sheet = sohWorkbook.Sheets[sheetName];
+            const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            
+            console.log('SOH Raw Data (first 3 rows):', rawData.slice(0, 3));
+            
+            // Find the first non-empty row to use as headers
+            let headerRowIndex = 0;
+            for (let i = 0; i < Math.min(5, rawData.length); i++) {
+                const row = rawData[i];
+                const hasContent = row && row.some(cell => cell !== null && cell !== undefined && cell !== '');
+                if (hasContent) {
+                    headerRowIndex = i;
+                    break;
+                }
+            }
+            
+            // Extract data starting from header row
+            sohData = rawData.slice(headerRowIndex);
+            
+            if (sohData.length > 0) {
+                sohHeaders = sohData[0];
+                console.log('SOH Headers:', sohHeaders);
+                populateColumnSelectors();
+            }
+        }
+
+        function populateColumnSelectors() {
+            console.log('Populating selectors - Price List Headers:', priceListHeaders);
+            console.log('Populating selectors - SOH Headers:', sohHeaders);
+            
+            if (priceListHeaders.length > 0) {
+                const priceItemSelect = document.getElementById('priceListItemColumn');
+                const pricePriceSelect = document.getElementById('priceListPriceColumn');
+                
+                priceItemSelect.innerHTML = '<option value="">-- Select Column --</option>';
+                pricePriceSelect.innerHTML = '<option value="">-- Select Column --</option>';
+                
+                priceListHeaders.forEach((header, index) => {
+                    const headerText = header || `Column ${index + 1}`;
+                    
+                    const option1 = document.createElement('option');
+                    option1.value = index;
+                    option1.textContent = headerText;
+                    priceItemSelect.appendChild(option1);
+                    
+                    const option2 = document.createElement('option');
+                    option2.value = index;
+                    option2.textContent = headerText;
+                    pricePriceSelect.appendChild(option2);
+                });
+
+                // Auto-select likely columns
+                autoSelectColumn(priceItemSelect, ['item', 'code', 'sku', 'product', 'number']);
+                autoSelectColumn(pricePriceSelect, ['price', 'cost', 'rsp', 'amount', 'value']);
+            }
+
+            if (sohHeaders.length > 0) {
+                const sohItemSelect = document.getElementById('sohItemColumn');
+                sohItemSelect.innerHTML = '<option value="">-- Select Column --</option>';
+                
+                sohHeaders.forEach((header, index) => {
+                    const headerText = header || `Column ${index + 1}`;
+                    
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = headerText;
+                    sohItemSelect.appendChild(option);
+                });
+
+                // Auto-select likely columns
+                autoSelectColumn(sohItemSelect, ['item', 'code', 'sku', 'product', 'number']);
+            }
+        }
+
+        function autoSelectColumn(selectElement, keywords) {
+            const options = Array.from(selectElement.options);
+            for (let keyword of keywords) {
+                const match = options.find(opt => 
+                    opt.textContent.toLowerCase().includes(keyword)
+                );
+                if (match) {
+                    selectElement.value = match.value;
+                    break;
+                }
+            }
+        }
+
+        function checkFilesReady() {
+            if (priceListData && sohData) {
+                document.getElementById('configSection').style.display = 'block';
+                document.getElementById('processBtn').disabled = false;
+                showAlert('Both files loaded successfully! Please configure the columns and click "Process & Match Data".', 'info');
+            }
+        }
+
+        function processFiles() {
+            // Validate that columns are selected
+            const priceItemColIndex = document.getElementById('priceListItemColumn').value;
+            const pricePriceColIndex = document.getElementById('priceListPriceColumn').value;
+            const sohItemColIndex = document.getElementById('sohItemColumn').value;
+            
+            if (priceItemColIndex === '' || pricePriceColIndex === '' || sohItemColIndex === '') {
+                showAlert('Please select all required columns before processing!', 'warning');
+                return;
+            }
+            
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('stats').classList.remove('show');
+            document.getElementById('previewSection').classList.remove('show');
+
+            setTimeout(() => {
+                try {
+                    const priceItemCol = parseInt(priceItemColIndex);
+                    const pricePriceCol = parseInt(pricePriceColIndex);
+                    const sohItemCol = parseInt(sohItemColIndex);
+                    const newPriceColumnName = document.getElementById('newPriceColumnName').value || 'Unit Price';
+
+                    console.log('Processing with columns:', {
+                        priceItemCol,
+                        pricePriceCol,
+                        sohItemCol,
+                        newPriceColumnName
+                    });
+
+                    // Create price lookup map
+                    const priceMap = new Map();
+                    for (let i = 1; i < priceListData.length; i++) {
+                        const row = priceListData[i];
+                        if (row[priceItemCol]) {
+                            const itemCode = String(row[priceItemCol]).trim().toLowerCase();
+                            const price = row[pricePriceCol];
+                            priceMap.set(itemCode, price);
+                        }
+                    }
+
+                    console.log('Price map created with', priceMap.size, 'items');
+
+                    // Process SOH data
+                    processedData = [];
+                    const newHeaders = [...sohHeaders, newPriceColumnName];
+                    processedData.push(newHeaders);
+
+                    let matchedCount = 0;
+                    let unmatchedCount = 0;
+
+                    for (let i = 1; i < sohData.length; i++) {
+                        const row = [...sohData[i]];
+                        const itemCode = row[sohItemCol] ? String(row[sohItemCol]).trim().toLowerCase() : '';
+                        
+                        let price = '';
+                        let matched = false;
+                        
+                        if (itemCode && priceMap.has(itemCode)) {
+                            price = priceMap.get(itemCode);
+                            matchedCount++;
+                            matched = true;
+                        } else {
+                            unmatchedCount++;
+                        }
+                        
+                        row.push(price);
+                        row._matched = matched; // Store match status
+                        processedData.push(row);
+                    }
+
+                    const totalItems = sohData.length - 1;
+                    const matchRate = totalItems > 0 ? ((matchedCount / totalItems) * 100).toFixed(1) : 0;
+
+                    console.log('Processing complete:', {
+                        totalItems,
+                        matchedCount,
+                        unmatchedCount,
+                        matchRate
+                    });
+
+                    // Update statistics
+                    document.getElementById('totalItems').textContent = totalItems;
+                    document.getElementById('matchedItems').textContent = matchedCount;
+                    document.getElementById('unmatchedItems').textContent = unmatchedCount;
+                    document.getElementById('matchRate').textContent = matchRate + '%';
+
+                    document.getElementById('loading').classList.remove('show');
+                    document.getElementById('stats').classList.add('show');
+                    
+                    displayPreview();
+                    
+                    document.getElementById('downloadBtn').style.display = 'block';
+                    document.getElementById('downloadCsvBtn').style.display = 'block';
+                    showAlert(`Processing complete! ${matchedCount} items matched out of ${totalItems} (${matchRate}% match rate).`, 'success');
+                    
+                } catch (error) {
+                    document.getElementById('loading').classList.remove('show');
+                    showAlert('Error processing files: ' + error.message, 'warning');
+                    console.error('Processing error:', error);
+                }
+            }, 500);
+        }
+
+        function displayPreview() {
+            const table = document.getElementById('previewTable');
+            table.innerHTML = '';
+
+            // Create header row
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            processedData[0].forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header || '';
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            // Create body rows (first 20 data rows)
+            const tbody = document.createElement('tbody');
+            const rowsToShow = Math.min(21, processedData.length);
+            
+            for (let i = 1; i < rowsToShow; i++) {
+                const row = processedData[i];
+                const tr = document.createElement('tr');
+                
+                if (row._matched) {
+                    tr.classList.add('matched');
+                } else {
+                    tr.classList.add('unmatched');
+                }
+
+                processedData[0].forEach((header, colIndex) => {
+                    const td = document.createElement('td');
+                    const value = row[colIndex];
+                    
+                    // Highlight new price column
+                    if (colIndex === processedData[0].length - 1 && value !== '') {
+                        td.classList.add('new-price');
+                    }
+                    
+                    td.textContent = value !== undefined && value !== null ? value : '';
+                    tr.appendChild(td);
+                });
+                
+                tbody.appendChild(tr);
+            }
+            table.appendChild(tbody);
+
+            document.getElementById('previewSection').classList.add('show');
+        }
+
+        function downloadResult() {
+            if (!processedData) {
+                showAlert('No data to download. Please process files first.', 'warning');
+                return;
+            }
+
+            try {
+                console.log('Starting download...');
+                console.log('Processed data length:', processedData.length);
+                
+                const removeUnpriced = document.getElementById('removeUnpriced').checked;
+                console.log('Remove unpriced:', removeUnpriced);
+                
+                // Clean data by removing the _matched property and ensuring proper array format
+                const cleanData = [];
+                
+                // Add header row
+                const numCols = processedData[0].length;
+                console.log('Number of columns:', numCols);
+                
+                const headerRow = [];
+                for (let j = 0; j < numCols; j++) {
+                    headerRow.push(processedData[0][j] !== undefined ? processedData[0][j] : '');
+                }
+                cleanData.push(headerRow);
+                
+                // Process data rows
+                let removedCount = 0;
+                const priceColumnIndex = numCols - 1; // Last column is the price column
+                
+                for (let i = 1; i < processedData.length; i++) {
+                    const row = processedData[i];
+                    
+                    if (!row || !Array.isArray(row)) {
+                        console.warn('Skipping invalid row at index', i);
+                        continue;
+                    }
+                    
+                    const priceValue = row[priceColumnIndex];
+                    
+                    // If removeUnpriced is checked, skip rows without a price
+                    if (removeUnpriced && (priceValue === '' || priceValue === null || priceValue === undefined)) {
+                        removedCount++;
+                        continue;
+                    }
+                    
+                    const cleanRow = [];
+                    for (let j = 0; j < numCols; j++) {
+                        const value = row[j];
+                        cleanRow.push(value !== undefined && value !== null ? value : '');
+                    }
+                    
+                    cleanData.push(cleanRow);
+                }
+
+                console.log('Clean data rows:', cleanData.length);
+                console.log('Removed count:', removedCount);
+
+                if (cleanData.length <= 1) {
+                    showAlert('No data to export after filtering!', 'warning');
+                    return;
+                }
+
+                // Create worksheet from array of arrays
+                const ws = XLSX.utils.aoa_to_sheet(cleanData);
+                console.log('Worksheet created');
+                
+                // Auto-size columns
+                const colWidths = [];
+                for (let i = 0; i < cleanData[0].length; i++) {
+                    let maxWidth = 10;
+                    for (let j = 0; j < Math.min(cleanData.length, 100); j++) {
+                        const cellValue = String(cleanData[j][i] || '');
+                        maxWidth = Math.max(maxWidth, cellValue.length);
+                    }
+                    colWidths.push({ wch: Math.min(maxWidth + 2, 50) });
+                }
+                ws['!cols'] = colWidths;
+
+                // Create workbook
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "SOH with Prices");
+                console.log('Workbook created');
+
+                // Generate filename with timestamp
+                const now = new Date();
+                const timestamp = now.getFullYear() + 
+                    String(now.getMonth() + 1).padStart(2, '0') + 
+                    String(now.getDate()).padStart(2, '0') + '_' +
+                    String(now.getHours()).padStart(2, '0') + 
+                    String(now.getMinutes()).padStart(2, '0') +
+                    String(now.getSeconds()).padStart(2, '0');
+                const suffix = removeUnpriced ? '_PricedOnly' : '';
+                const filename = `SOH_with_Prices${suffix}_${timestamp}.xlsx`;
+                
+                console.log('Filename:', filename);
+                
+                // Write to binary array
+                const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                
+                // Convert to base64
+                const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                
+                // Create object URL and force download
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                
+                document.body.appendChild(a);
+                
+                // Force click
+                a.click();
+                
+                // Clean up after delay
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 250);
+                
+                console.log('File write command executed');
+                
+                const totalRows = cleanData.length - 1;
+                let message = `Excel download initiated for "${filename}"! `;
+                if (removeUnpriced && removedCount > 0) {
+                    message += `${removedCount} items without pricing were removed. ${totalRows} items with pricing included. `;
+                } else {
+                    message += `${totalRows} total items included. `;
+                }
+                message += 'Check your Downloads folder. If it doesn\'t appear, try the CSV download button instead.';
+                
+                showAlert(message, 'success');
+                console.log('Download process complete');
+                
+            } catch (error) {
+                showAlert('Error downloading file: ' + error.message + '. Please try the CSV download button instead.', 'warning');
+                console.error('Download error:', error);
+                console.error('Error stack:', error.stack);
+            }
+        }
+
+        function downloadCSV() {
+            if (!processedData) {
+                showAlert('No data to download. Please process files first.', 'warning');
+                return;
+            }
+
+            try {
+                console.log('Starting CSV download...');
+                
+                const removeUnpriced = document.getElementById('removeUnpriced').checked;
+                
+                // Clean data
+                const cleanData = [];
+                const numCols = processedData[0].length;
+                
+                // Add header row
+                const headerRow = [];
+                for (let j = 0; j < numCols; j++) {
+                    headerRow.push(processedData[0][j] !== undefined ? processedData[0][j] : '');
+                }
+                cleanData.push(headerRow);
+                
+                // Process data rows
+                let removedCount = 0;
+                const priceColumnIndex = numCols - 1;
+                
+                for (let i = 1; i < processedData.length; i++) {
+                    const row = processedData[i];
+                    
+                    if (!row || !Array.isArray(row)) {
+                        continue;
+                    }
+                    
+                    const priceValue = row[priceColumnIndex];
+                    
+                    if (removeUnpriced && (priceValue === '' || priceValue === null || priceValue === undefined)) {
+                        removedCount++;
+                        continue;
+                    }
+                    
+                    const cleanRow = [];
+                    for (let j = 0; j < numCols; j++) {
+                        const value = row[j];
+                        cleanRow.push(value !== undefined && value !== null ? value : '');
+                    }
+                    
+                    cleanData.push(cleanRow);
+                }
+
+                // Convert to CSV format with proper Excel compatibility
+                const csvContent = cleanData.map(row => {
+                    return row.map(cell => {
+                        const cellStr = String(cell);
+                        // Always quote fields that contain commas, quotes, newlines, or leading zeros
+                        if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n') || cellStr.includes('\r') || /^0\d/.test(cellStr)) {
+                            return '"' + cellStr.replace(/"/g, '""') + '"';
+                        }
+                        return cellStr;
+                    }).join(',');
+                }).join('\r\n');  // Use Windows line endings for Excel
+
+                // Add UTF-8 BOM for proper Excel opening
+                const BOM = '\uFEFF';
+                const finalContent = BOM + csvContent;
+
+                // Create blob and download
+                const blob = new Blob([finalContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                
+                const now = new Date();
+                const timestamp = now.getFullYear() + 
+                    String(now.getMonth() + 1).padStart(2, '0') + 
+                    String(now.getDate()).padStart(2, '0') + '_' +
+                    String(now.getHours()).padStart(2, '0') + 
+                    String(now.getMinutes()).padStart(2, '0') +
+                    String(now.getSeconds()).padStart(2, '0');
+                const suffix = removeUnpriced ? '_PricedOnly' : '';
+                const filename = `SOH_with_Prices${suffix}_${timestamp}.csv`;
+                
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }, 100);
+                
+                const totalRows = cleanData.length - 1;
+                let message = `CSV file downloaded! ${totalRows} items included. `;
+                if (removeUnpriced && removedCount > 0) {
+                    message += `(${removedCount} unpriced items removed) `;
+                }
+                message += '\n\n📌 TO CONVERT TO EXCEL:\n1. Open the CSV in Excel\n2. File → Save As\n3. Choose "Excel Workbook (.xlsx)"\n4. Professional Excel file ready to share!';
+                
+                showAlert(message, 'success');
+                console.log('CSV download complete');
+                
+            } catch (error) {
+                showAlert('Error downloading CSV: ' + error.message, 'warning');
+                console.error('CSV download error:', error);
+            }
+        }
+
+        function resetAll() {
+            if (confirm('Are you sure you want to reset everything? This will clear all loaded files and data.')) {
+                priceListData = null;
+                sohData = null;
+                processedData = null;
+                priceListHeaders = [];
+                sohHeaders = [];
+
+                document.getElementById('priceListFile').value = '';
+                document.getElementById('sohFile').value = '';
+                document.getElementById('priceListName').textContent = '';
+                document.getElementById('sohName').textContent = '';
+                
+                document.getElementById('priceListBox').classList.remove('active');
+                document.getElementById('sohBox').classList.remove('active');
+                
+                document.getElementById('configSection').style.display = 'none';
+                document.getElementById('processBtn').disabled = true;
+                document.getElementById('downloadBtn').style.display = 'none';
+                document.getElementById('downloadCsvBtn').style.display = 'none';
+                
+                document.getElementById('stats').classList.remove('show');
+                document.getElementById('previewSection').classList.remove('show');
+                document.getElementById('alertBox').classList.remove('show');
+                
+                showAlert('All data has been reset. Please upload new files.', 'info');
+            }
+        }
+
+        function showAlert(message, type) {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.className = 'alert show alert-' + type;
+            alertBox.textContent = message;
+            
+            setTimeout(() => {
+                alertBox.classList.remove('show');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
